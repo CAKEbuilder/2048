@@ -1,28 +1,33 @@
 
+# definitions
+$debug = 1
 
-# we will track the value of each object in this array
+# we will track the value of each object in this array, adding values as we spawn new objects
 $object = @()
 
-# determine the starting value of each object prior to spawning.
-#   the probability of a 2 is 90%
-#   the probability of a 4 is 10%
+# track all positions of the board at all times. remember that $matrix represents the entire board, not just the play space
+# matrix[y,x]
+$matrix = New-Object 'object[,]' 6,6
 
-# create these probabilities by chosing a random value between 1 and 10. if 4, then 4. else, 2
-for($i=0;$i -lt 16;$i++) {   # 16 because the play area is 4x4
-    
-    $rand = Get-Random -min 1 -max 11   # 11 or 10?
-    
-    if($rand -eq 4) {
-        $value = 4
+# define the matrix size by defining each position as a space. we will overwrite each position when necessary
+# need a more elegant way of doing this
+for($i=0;$i -lt 6;$i++) {
+    for($h=0;$h -lt 6;$h++) {
+        $matrix[$h,$i] = " "
     }
-    else {
-        $value = 2
-    }
-
-    $object += $value
-
 }
 
+
+
+if($debug -eq 1) {
+    Set-PSBreakpoint -Variable breakHere
+}
+else {
+    # remove breakpoints, if any exists
+    if(Get-PSBreakpoint) {
+        Get-PSBreakpoint | Remove-PSBreakpoint
+    }
+}
 
 
 
@@ -32,28 +37,54 @@ function Write-Buffer ([string] $str, [int] $x = 0, [int] $y = 0) {
     Write-Host $str -NoNewline
 }
 
-# prepare the board
-clear
+# call this function when we need to spawn a new object. create either a 2 or a 4, then spawn it
+function createObject {
 
-# track all positions of the board at all times.
-# matrix[y,x]
-$matrix = New-Object 'object[,]' 6,6
+    # determine the starting value of the new object
+    #   the probability of a 2 is 90%
+    #   the probability of a 4 is 10%
 
+    $rand = Get-Random -min 1 -max 11   # 11 or 10?
 
-# define the matrix by defining each position as a space. we will overwrite each position when necessary
-# need a more elegant way of doing this
-for($i=0;$i -lt 6;$i++) {
-    for($h=0;$h -lt 6;$h++) {
-        $matrix[$h,$i] = " "
+    if($rand -eq 4) {
+        $value = 4
     }
+    else {
+        $value = 2
+    }
+
+    $object += $value
+
+
+    # find a random, empty location in the play space for the object
+    #   play space = 1,1 through 4,4
+    #   apparently -max must = 5 to produce 4s, but won't produce 5s?
+    $valid = $false
+    do {
+        $x = Get-Random -min 1 -max 5
+        $y = Get-Random -min 1 -max 5
+
+        if($matrix[$y,$x] = " ") {
+            # we can spawn the object here
+            $matrix[$y,$x] = $value
+            $valid = $true
+        }
+    } until ($valid)
+
 }
 
 
-# find a random location in the play space for the first object ($object[0])
-# play space = 1,1 through 4,4
-# apparently -max must = 5 to produce 4s, but won't produce 5s?
-$objX = Get-Random -min 1 -max 5
-$objY = Get-Random -min 1 -max 5
+
+
+
+# create the first two objects
+createObject
+createObject
+
+
+# prepare the board
+clear
+
 
 # add the obj to the matrix
 $matrix[$objY,$objX] = 2
