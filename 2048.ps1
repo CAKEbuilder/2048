@@ -64,11 +64,12 @@ function createObject {
         $x = Get-Random -min 1 -max 5
         $y = Get-Random -min 1 -max 5
 
-        if($matrix[$y,$x] = " ") {
+        if($matrix[$y,$x] -eq " ") {
             # we can spawn the object here
             $matrix[$y,$x] = $value
             $valid = $true
         }
+
     } until ($valid)
 
 }
@@ -86,9 +87,6 @@ createObject
 clear
 
 
-# add the obj to the matrix
-$matrix[$objY,$objX] = 2
-
 # build the top and bottom borders
 for($i=0;$i -lt 6;$i++) {
     # top border
@@ -104,11 +102,14 @@ for($i=0;$i -lt 6;$i++) {
     $matrix[5,$i] = "#"
 }
 
+
 # draw the board
 for($x=0;$x -lt 6;$x++) {
     for($y=0;$y -lt 6;$y++) {
         write-buffer $matrix[$y,$x] $x $y
     }
 }
+
+
 
 
