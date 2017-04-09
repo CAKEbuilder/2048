@@ -74,18 +74,16 @@ function createObject {
 
 }
 
+# attempt to move objects to the right
+function shiftRight {
+
+}
 
 
 
 
-# create the first two objects
+# make sure we init with one object. on first run of the game, we'll add the second object
 createObject
-createObject
-
-
-# prepare the board
-clear
-
 
 # build the top and bottom borders
 for($i=0;$i -lt 6;$i++) {
@@ -103,12 +101,63 @@ for($i=0;$i -lt 6;$i++) {
 }
 
 
-# draw the board
-for($x=0;$x -lt 6;$x++) {
-    for($y=0;$y -lt 6;$y++) {
-        write-buffer $matrix[$y,$x] $x $y
+
+
+# prepare the board
+clear
+
+# play!
+while(1 -eq 1) {
+
+    createObject
+
+    # draw the board
+    for($x=0;$x -lt 6;$x++) {
+        for($y=0;$y -lt 6;$y++) {
+            write-buffer $matrix[$y,$x] $x $y
+        }
     }
+
+    # don't continue until the player inputs a valid key
+    $validInput = $false
+    do {
+        # read the input        
+        $playerInput = [System.Console]::ReadKey() 
+        
+        if(($playerInput.key -eq "UpArrow") -or ($playerInput.key -eq "LeftArrow") -or ($playerInput.key -eq "RightArrow") -or ($playerInput.key -eq "DownArrow") -or ($playerInput.key -eq "Escape")) {
+            $validInput = $true
+        }
+        
+    } until ($validInput)
+    
+    # move objects
+    switch ($playerInput.key) {
+        UpArrow {
+            # up
+        }
+        LeftArrow {
+            # left
+        }
+        RightArrow {
+            # right
+            shiftRight
+        }
+        DownArrow {
+            # down
+        }
+        Escape {
+            exit
+        }
+    }
+
+
+
+
+
 }
+
+
+
 
 
 
