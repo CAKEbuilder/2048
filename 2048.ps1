@@ -1,6 +1,6 @@
 
 # definitions
-$debug = 0
+$debug = 1
 
 # store the value in each position
 $posValue = @(0) * 16
@@ -323,21 +323,6 @@ function createObject {
         $value = 2
     }
 
-    # detect game over. need to add to this a check for if any valid moves exist. if the board is filled and no moves can be made, then game over
-    # count the number of times 0 appears in the array of positions. if it exists 0 times, then the board is filled. game over
-    $isTheBoardFilled = $posValue | group | where name -eq 0 | select -expandproperty count
-    if(!$isTheBoardFilled) {
-        clear
-        write-host "game over"
-
-        [console]::CursorVisible = $originalCursorState
-
-        exit
-    }
-    <#
-    #>
-
-    # if we're here, then there is at least one empty position on the board to fill
     # loop until the random position we've tried is empty
     do {
         # randomly choose an empty position
@@ -348,7 +333,60 @@ function createObject {
     $posValue[$r] = $value
 }
 
+function detectGameOver {
 
+    # for each position, check the surrounding positions. if they have the same value as the current position, the game can play on
+    for($i=0;$i -le 15;$i++) {
+
+        # for each position, check above/below/left/right for equivallent values
+        $validMovesRemaining = $true
+        $canWeSpawnNewPieces = $posValue | group | where name -eq 0 | select -expandproperty count
+
+        if(!$canWeSpawnNewPieces) {
+            $above = $null
+            $below = $null
+            $right = $null
+            $left  = $null
+
+            # above position
+            if(($i -ne 0) -and ($i -ne 1) -and ($i -ne 2) -and ($i -ne 3)) {
+                $above = $posValue[$i-4]
+            }
+
+            # below position
+            if(($i -ne 12) -and ($i -ne 13) -and ($i -ne 14) -and ($i -ne 15)) {
+                $below = $posValue[$i+4]
+            }
+        
+            # right position
+            if(($i -ne 3) -and ($i -ne 7) -and ($i -ne 11) -and ($i -ne 15)) {
+                $right = $posValue[$i+1]
+            }
+
+            # left position
+            if(($i -ne 0) -and ($i -ne 4) -and ($i -ne 8) -and ($i -ne 12)) {
+                $left = $posValue[$i-1]
+            }
+
+            # evaluate each direction
+            if(($posValue[$i] -eq $posValue[$above]) -or ($posValue[$i] -eq $posValue[$below]) -or ($posValue[$i] -eq $posValue[$right]) -or ($posValue[$i] -eq $posValue[$left])) {
+                # then there are still valid moves on the board
+                $validMovesRemaining = $true
+            }
+
+        }
+
+    }
+
+    if(!$validMovesRemaining) {
+        clear
+        write-host "game over"
+        [console]::CursorVisible = $originalCursorState
+        exit
+    }
+
+
+}
 
 
 
@@ -385,6 +423,7 @@ for($i=0;$i -le 18;$i++) {
 # play!
 while (1 -eq 1) {
 
+    detectGameOver
     createObject
     drawBoard
     
