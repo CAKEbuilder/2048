@@ -26,9 +26,17 @@ $posCoords[13] =  "9.15"
 $posCoords[14] = "16.15"
 $posCoords[15] = "23.15"
 
-$originalCursorState = [console]::CursorVisible
+# allow the first piece to spawn
+$global:didAnyPiecesMove = $true
 
+# capture original values so players don't hate you
+$originalCursorState = [console]::CursorVisible
+$originalBackgroundColor = [console]::BackgroundColor   # DarkMagenta
+# all available colors: [Enum]::GetValues([ConsoleColor])
+
+# setup the properties of the game
 [console]::CursorVisible = $false
+#[console]::BackgroundColor = "DarkGray"
 
 
 <#
@@ -71,10 +79,24 @@ else {
     }
 }
 
-# buffer the board to the screen
+# write-buffer no color
 function Write-Buffer ([string] $str, [int] $x = 0, [int] $y = 0) {
     [console]::setcursorposition($x,$y)
     Write-Host $str -NoNewline
+}
+
+<#
+# write-buffer with color
+function Write-Buffer ([string] $str, [int] $x = 0, [int] $y = 0,[string]$fg = "White",[string]$bg = "DarkGray") {
+    [console]::setcursorposition($x,$y)
+    Write-Host $str -NoNewline -ForegroundColor $fg -BackgroundColor $bg
+}
+#>
+
+function restoreConsole {
+    [console]::CursorVisible = $originalCursorState
+    [console]::BackgroundColor = $originalBackgroundColor
+    clear
 }
 
 function shiftRight {
@@ -85,6 +107,7 @@ function shiftRight {
             # keep working on this position as it moves right until you can no longer do anything with it
             $posTemp = $pos
             $done = $false
+            $global:didAnyPiecesMove = $false
             do {
                 # check the value to the right
                 $nextValueRight = $posValue[$posTemp+1]
@@ -98,6 +121,8 @@ function shiftRight {
                     $posValueCentered[$posTemp] = "     "
                     # stay with this value
                     $posTemp = $posTemp + 1
+                    # identify that at least one piece moved. if when we're done evaluating all the pieces we find none have moved, we won't spawn a new piece.
+                    $global:didAnyPiecesMove = $true
                 }
                 elseif($nextValueRight -eq $posValue[$posTemp]) {
                     # we can multiply the next position by 2
@@ -108,6 +133,8 @@ function shiftRight {
                     $posValueCentered[$posTemp] = "     "
                     # stay with this value
                     $posTemp = $posTemp + 1
+                    $done = $true
+                    $global:didAnyPiecesMove = $true
                 }
                 else {
                     # we can not do anything else with this position
@@ -144,6 +171,7 @@ function shiftLeft {
                     $posValue[$posTemp] = 0
                     $posValueCentered[$posTemp] = "     "
                     $posTemp = $posTemp - 1
+                    $done = $true
                 }
                 else {
                     $done = $true
@@ -165,20 +193,21 @@ function shiftUp {
             $posTemp = $pos
             $done = $false
             do {
-                $nextValueDown = $posValue[$posTemp-4]
-                if($nextValueDown -eq 0) {
+                $nextValueUp = $posValue[$posTemp-4]
+                if($nextValueUp -eq 0) {
                     $posValue[$posTemp-4] = $posValue[$posTemp]
                     $posValueCentered[$posTemp-4] = $posValueCentered[$posTemp]
                     $posValue[$posTemp] = 0
                     $posValueCentered[$posTemp] = "     "
                     $posTemp = $posTemp - 4
                 }
-                elseif($nextValueDown -eq $posValue[$posTemp]) {
+                elseif($nextValueUp -eq $posValue[$posTemp]) {
                     $posValue[$posTemp-4] = $posValue[$posTemp-4] * 2
                     $posValueCentered[$posTemp-4] = $posValueCentered[$posTemp]
                     $posValue[$posTemp] = 0
                     $posValueCentered[$posTemp] = "     "
                     $posTemp = $posTemp - 4
+                    $done = $true
                 }
                 else {
                     $done = $true
@@ -223,6 +252,7 @@ function shiftDown {
                     $posValue[$posTemp] = 0
                     $posValueCentered[$posTemp] = "     "
                     $posTemp = $posTemp + 4
+                    $done = $true
                 }
                 else {
                     $done = $true
@@ -309,28 +339,34 @@ function drawBoard {
 }
 
 function createObject {
-    # determine the starting value of the new object
-    #   the probability of a 2 is 90%
-    #   the probability of a 4 is 10%
+    
+    # only create a new object if during our last turn we moved a piece.
 
-    $r = Get-Random -min 1 -max 11   # 11 or 10?
-    $randValue = $r
+    if($global:didAnyPiecesMove) {
 
-    if($randValue -eq 4) {
-        $value = 4
+        # determine the starting value of the new object
+        #   the probability of a 2 is 90%
+        #   the probability of a 4 is 10%
+
+        $r = Get-Random -min 1 -max 11   # 11 or 10?
+        $randValue = $r
+
+        if($randValue -eq 4) {
+            $value = 4
+        }
+        else {
+            $value = 2
+        }
+
+        # loop until the random position we've tried is empty
+        do {
+            # randomly choose an empty position
+            $r = Get-Random -min 0 -max 16   # 16 board positions
+            $randPos = $posValue[$r]
+        } until ($randPos -eq 0)
+
+        $posValue[$r] = $value
     }
-    else {
-        $value = 2
-    }
-
-    # loop until the random position we've tried is empty
-    do {
-        # randomly choose an empty position
-        $r = Get-Random -min 0 -max 16   # 16 board positions
-        $randPos = $posValue[$r]
-    } until ($randPos -eq 0)
-
-    $posValue[$r] = $value
 }
 
 function detectGameOver {
@@ -381,7 +417,7 @@ function detectGameOver {
     if(!$validMovesRemaining) {
         clear
         write-host "game over"
-        [console]::CursorVisible = $originalCursorState
+        restoreConsole
         exit
     }
 
@@ -451,7 +487,7 @@ while (1 -eq 1) {
             shiftDown
         }
         Escape {
-            [console]::CursorVisible = $originalCursorState
+            restoreConsole
             exit
         }
     }
