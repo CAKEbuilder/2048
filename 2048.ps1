@@ -10,24 +10,28 @@ $posValueCentered = @($null) * 16
 
 $posFGColor = @("White") * 16
 $posBGColor = @("DarkMagenta") * 16
+$global:pieceJustSpawned = @(0) * 16
+
+$defaultfG = "white"
+$defaultBG = "darkgray"
 
 $posCoords = @($null) * 16
 $posCoords[0]  =  "2.3"   # created as strings so we can split on the period, then we cast as int later
-$posCoords[1]  =  "9.3"
-$posCoords[2]  = "16.3"
-$posCoords[3]  = "23.3"
-$posCoords[4]  =  "2.7"
-$posCoords[5]  =  "9.7"
-$posCoords[6]  = "16.7"
-$posCoords[7]  = "23.7"
-$posCoords[8]  =  "2.11"
-$posCoords[9]  =  "9.11"
-$posCoords[10] = "16.11"
-$posCoords[11] = "23.11"
-$posCoords[12] =  "2.15"
-$posCoords[13] =  "9.15"
-$posCoords[14] = "16.15"
-$posCoords[15] = "23.15"
+$posCoords[1]  =  "10.3"
+$posCoords[2]  = "18.3"
+$posCoords[3]  = "26.3"
+$posCoords[4]  =  "2.8"
+$posCoords[5]  =  "10.8"
+$posCoords[6]  = "18.8"
+$posCoords[7]  = "26.8"
+$posCoords[8]  =  "2.13"
+$posCoords[9]  =  "10.13"
+$posCoords[10] = "18.13"
+$posCoords[11] = "26.13"
+$posCoords[12] =  "2.18"
+$posCoords[13] =  "10.18"
+$posCoords[14] = "18.18"
+$posCoords[15] = "26.18"
 
 # allow the first piece to spawn
 $global:didAnyPiecesMove = $true
@@ -43,25 +47,6 @@ $originalBackgroundColor = [console]::BackgroundColor   # DarkMagenta
 
 
 <#
-    positions: (x,y)
-    each position is the left most character and goes right for a total of 5 characters
-
-    [0]  =   2,3 (through 6,3)
-    [1]  =   9,3
-    [2]  =  16,3
-    [3]  =  23,3
-    [4]  =   2,7
-    [5]  =   9,7
-    [6]  =  16,7
-    [7]  =  23,7
-    [8]  =   2,11
-    [9]  =   9,11
-    [10] =  16,11
-    [11] =  23,11
-    [12] =   2,15
-    [13] =   9,15
-    [14] =  16,15
-    [15] =  23,15
 
   not to scale, used for reference
   ###############
@@ -91,14 +76,9 @@ function Write-Buffer ([string] $str, [int] $x = 0, [int] $y = 0) {
 #>
 
 # write-buffer with color
-function Write-Buffer ([string] $str, [int] $x = 0, [int] $y = 0,[string]$fg = "none",[string]$bg = "none") {
+function Write-Buffer ([string] $str, [int] $x = 0, [int] $y = 0,[string]$fg = $defaultFG,[string]$bg = $defaultBG) {
     [console]::setcursorposition($x,$y)
-    if(($fg -eq "none") -or ($bg -eq "none")) {
-        Write-Host $str -NoNewline
-    }
-    else {
-        Write-Host $str -NoNewline -ForegroundColor $fg -BackgroundColor $bg
-    }
+    Write-Host $str -NoNewline -ForegroundColor $fg -BackgroundColor $bg
 }
 
 function restoreConsole {
@@ -304,6 +284,42 @@ function updateColors {
             $posFGColor[$i] = "white"
             $posBGColor[$i] = "darkred"
         }
+        if($posValue[$i] -eq 8) {
+            $posFGColor[$i] = "white"
+            $posBGColor[$i] = "darkred"
+        }
+        if($posValue[$i] -eq 16) {
+            $posFGColor[$i] = "white"
+            $posBGColor[$i] = "darkred"
+        }
+        if($posValue[$i] -eq 32) {
+            $posFGColor[$i] = "white"
+            $posBGColor[$i] = "darkred"
+        }
+        if($posValue[$i] -eq 64) {
+            $posFGColor[$i] = "white"
+            $posBGColor[$i] = "darkred"
+        }
+        if($posValue[$i] -eq 128) {
+            $posFGColor[$i] = "white"
+            $posBGColor[$i] = "darkred"
+        }
+        if($posValue[$i] -eq 256) {
+            $posFGColor[$i] = "white"
+            $posBGColor[$i] = "darkred"
+        }
+        if($posValue[$i] -eq 512) {
+            $posFGColor[$i] = "white"
+            $posBGColor[$i] = "darkred"
+        }
+        if($posValue[$i] -eq 1024) {
+            $posFGColor[$i] = "white"
+            $posBGColor[$i] = "darkred"
+        }
+        if($posValue[$i] -eq 2048) {
+            $posFGColor[$i] = "white"
+            $posBGColor[$i] = "darkred"
+        }
     }
 }
 
@@ -349,25 +365,42 @@ function drawBoard {
             $leftRightSymbol = "|"
         }
 
-        # draw the piece borders. do the tops/bottoms, then lefts/rights
-        for($b=0;$b -lt 5;$b++) {
-            # top
-            write-buffer $topBottomSymbol ($x+$b) ($y-2)
-            # bottom
-            write-buffer $topBottomSymbol ($x+$b) ($y+1)
+        # _dev attempt to create some kind of animation to indicate which piece just spawned
+        # if the piece just spawned, do an animation. otherwise, just do the normal piece border drawing function
+        if($global:pieceJustSpawned[$i] -eq 1) {
+            # draw the piece borders. do the tops/bottoms, then lefts/rights
+            for($b=0;$b -lt 5;$b++) {
+                # top
+                write-buffer $topBottomSymbol ($x+$b) ($y-2)
+                # bottom
+                write-buffer $topBottomSymbol ($x+$b) ($y+1)
 
-        }
+            }
         
-        for($b=(-1);$b -lt 2;$b++) {
-            # left
-            write-buffer $leftRightSymbol ($x-1) ($y+$b)
-            # right
-            write-buffer $leftRightSymbol ($x+5) ($y+$b)
+            for($b=(-1);$b -lt 2;$b++) {
+                # left
+                write-buffer $leftRightSymbol ($x-1) ($y+$b)
+                # right
+                write-buffer $leftRightSymbol ($x+5) ($y+$b)
+            }
+        }
+        else {
+            for($b=0;$b -lt 5;$b++) {
+                write-buffer $topBottomSymbol ($x+$b) ($y-2)
+                write-buffer $topBottomSymbol ($x+$b) ($y+1)
+
+            }
+        
+            for($b=(-1);$b -lt 2;$b++) {
+                write-buffer $leftRightSymbol ($x-1) ($y+$b)
+                write-buffer $leftRightSymbol ($x+5) ($y+$b)
+            }
         }
 
         # set the cursor position off the board. I was leaving the cursor in the last position and overwriting stuff. a cursor pos reset used to exist in write-buffer, but putting it here will reduce overhead, not repeating this instruction on every call of write-buffer
         [console]::setcursorposition(0,40)
     }
+
 }
 
 function createObject {
@@ -398,6 +431,10 @@ function createObject {
         } until ($randPos -eq 0)
 
         $posValue[$r] = $value
+        # reset the "just spawned" array
+        $global:pieceJustSpawned = @(0) * 16
+        # set the piece that just spawned
+        $global:pieceJustSpawned[$r] = 1
     }
 
 }
@@ -467,24 +504,46 @@ function detectGameOver {
 clear
 
 # draw the game borders. only needs to happen once, then we just append to the screen with Write-Buffer
-for($i=0;$i -le 18;$i++) {
+for($i=0;$i -le 21;$i++) {
     # top
     if($i -eq 0) {
-        write-host ("#" * 30)
+        write-host ("#" * 33)
     }
     # bottom
-    elseif($i -eq (18)) {
-        write-host ("#" * 30)
+    elseif($i -eq (21)) {
+        write-host ("#" * 33)
     }
     # middle
     else {
-        write-host "#" (" " * (30-4)) "#"
+        write-host "#" (" " * (33-4)) "#"
     }
 
 }
 
+# colorize the board
+for($i=1;$i -le 20;$i++) {
+    # fill in the entire play space with a color
+    for($a=1;$a -le 31;$a++) {
+        write-buffer " " $a $i "white" $defaultBG
+    }
 
+}
 
+# draw the grid columns
+# only need to do this on init since these positions are never touched by anything later
+# would be faster to just write-host exactly what you need.
+for($i=1;$i -le 20;$i++) {
+    write-buffer "|" 8 $i "gray" $defaultBG
+    write-buffer "|" 16 $i "gray" $defaultBG
+    write-buffer "|" 24 $i "gray" $defaultBG
+}
+
+for($i=1;$i -le 31;$i++) {
+    # draw the grid rows
+    write-buffer "-" $i 5 "gray" $defaultBG
+    write-buffer "-" $i 10 "gray" $defaultBG
+    write-buffer "-" $i 15 "gray" $defaultBG
+}
 
 
 
