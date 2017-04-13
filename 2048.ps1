@@ -8,6 +8,9 @@ $posValue = @(0) * 16
 # used for keeping position values formatted to fit the game piece correctly
 $posValueCentered = @($null) * 16
 
+$posFGColor = @("White") * 16
+$posBGColor = @("DarkMagenta") * 16
+
 $posCoords = @($null) * 16
 $posCoords[0]  =  "2.3"   # created as strings so we can split on the period, then we cast as int later
 $posCoords[1]  =  "9.3"
@@ -79,19 +82,24 @@ else {
     }
 }
 
+<#
 # write-buffer no color
 function Write-Buffer ([string] $str, [int] $x = 0, [int] $y = 0) {
     [console]::setcursorposition($x,$y)
     Write-Host $str -NoNewline
 }
-
-<#
-# write-buffer with color
-function Write-Buffer ([string] $str, [int] $x = 0, [int] $y = 0,[string]$fg = "White",[string]$bg = "DarkGray") {
-    [console]::setcursorposition($x,$y)
-    Write-Host $str -NoNewline -ForegroundColor $fg -BackgroundColor $bg
-}
 #>
+
+# write-buffer with color
+function Write-Buffer ([string] $str, [int] $x = 0, [int] $y = 0,[string]$fg = "none",[string]$bg = "none") {
+    [console]::setcursorposition($x,$y)
+    if(($fg -eq "none") -or ($bg -eq "none")) {
+        Write-Host $str -NoNewline
+    }
+    else {
+        Write-Host $str -NoNewline -ForegroundColor $fg -BackgroundColor $bg
+    }
+}
 
 function restoreConsole {
     [console]::CursorVisible = $originalCursorState
@@ -156,6 +164,7 @@ function shiftLeft {
         if(($posValue[$pos] -ne 0) -and ($posValue[$pos] -ne $null) -and ($pos -ne 0) -and ($pos -ne 4) -and ($pos -ne 8) -and ($pos -ne 12)) {
             $posTemp = $pos
             $done = $false
+            $global:didAnyPiecesMove = $false
             do {
                 $nextValueLeft = $posValue[$posTemp-1]
                 if($nextValueLeft -eq 0) {
@@ -164,6 +173,7 @@ function shiftLeft {
                     $posValue[$posTemp] = 0
                     $posValueCentered[$posTemp] = "     "
                     $posTemp = $posTemp - 1
+                    $global:didAnyPiecesMove = $true
                 }
                 elseif($nextValueLeft -eq $posValue[$posTemp]) {
                     $posValue[$posTemp-1] = $posValue[$posTemp-1] * 2
@@ -172,6 +182,7 @@ function shiftLeft {
                     $posValueCentered[$posTemp] = "     "
                     $posTemp = $posTemp - 1
                     $done = $true
+                    $global:didAnyPiecesMove = $true
                 }
                 else {
                     $done = $true
@@ -192,6 +203,7 @@ function shiftUp {
         if(($posValue[$pos] -ne 0) -and ($posValue[$pos] -ne $null) -and ($pos -ne 0) -and ($pos -ne 1) -and ($pos -ne 2) -and ($pos -ne 3)) {
             $posTemp = $pos
             $done = $false
+            $global:didAnyPiecesMove = $false
             do {
                 $nextValueUp = $posValue[$posTemp-4]
                 if($nextValueUp -eq 0) {
@@ -200,6 +212,7 @@ function shiftUp {
                     $posValue[$posTemp] = 0
                     $posValueCentered[$posTemp] = "     "
                     $posTemp = $posTemp - 4
+                    $global:didAnyPiecesMove = $true
                 }
                 elseif($nextValueUp -eq $posValue[$posTemp]) {
                     $posValue[$posTemp-4] = $posValue[$posTemp-4] * 2
@@ -208,6 +221,7 @@ function shiftUp {
                     $posValueCentered[$posTemp] = "     "
                     $posTemp = $posTemp - 4
                     $done = $true
+                    $global:didAnyPiecesMove = $true
                 }
                 else {
                     $done = $true
@@ -237,6 +251,7 @@ function shiftDown {
         if(($posValue[$pos] -ne 0) -and ($posValue[$pos] -ne $null) -and ($pos -ne 12) -and ($pos -ne 13) -and ($pos -ne 14) -and ($pos -ne 15)) {
             $posTemp = $pos
             $done = $false
+            $global:didAnyPiecesMove = $false
             do {
                 $nextValueDown = $posValue[$posTemp+4]
                 if($nextValueDown -eq 0) {
@@ -245,6 +260,7 @@ function shiftDown {
                     $posValue[$posTemp] = 0
                     $posValueCentered[$posTemp] = "     "
                     $posTemp = $posTemp + 4
+                    $global:didAnyPiecesMove = $true
                 }
                 elseif($nextValueDown -eq $posValue[$posTemp]) {
                     $posValue[$posTemp+4] = $posValue[$posTemp+4] * 2
@@ -253,6 +269,7 @@ function shiftDown {
                     $posValueCentered[$posTemp] = "     "
                     $posTemp = $posTemp + 4
                     $done = $true
+                    $global:didAnyPiecesMove = $true
                 }
                 else {
                     $done = $true
@@ -272,6 +289,20 @@ function shiftDown {
         }
         if($pos -eq 1) {
             $pos = 16
+        }
+    }
+}
+
+function updateColors {
+    # before drawing the board, let's update the colors of each pos
+    for($i=0;$i -le 15;$i++) {
+        if($posValue[$i] -eq 2) {
+            $posFGColor[$i] = "white"
+            $posBGColor[$i] = "darkgreen"
+        }
+        if($posValue[$i] -eq 4) {
+            $posFGColor[$i] = "white"
+            $posBGColor[$i] = "darkred"
         }
     }
 }
@@ -305,6 +336,7 @@ function drawBoard {
 
         $x = [int]$posCoords[$i].Split('.')[0]
         $y = [int]$posCoords[$i].Split('.')[1]
+        #write-buffer $posValueCentered[$i] $x $y $posFGColor[$i] $posBGColor[$i]
         write-buffer $posValueCentered[$i] $x $y
 
         # prepare the symbol to use for drawing the piece border. if a piece is 0 or $null, "erase" the piece border by overwriting the previous border with spaces. also erase the old value
@@ -367,6 +399,7 @@ function createObject {
 
         $posValue[$r] = $value
     }
+
 }
 
 function detectGameOver {
@@ -455,10 +488,10 @@ for($i=0;$i -le 18;$i++) {
 
 
 
-
 # play!
 while (1 -eq 1) {
 
+    updateColors
     detectGameOver
     createObject
     drawBoard
@@ -467,7 +500,7 @@ while (1 -eq 1) {
     $validInput = $false
     do {
         $playerInput = [System.Console]::ReadKey() 
-        if(($playerInput.key -eq "UpArrow") -or ($playerInput.key -eq "LeftArrow") -or ($playerInput.key -eq "RightArrow") -or ($playerInput.key -eq "DownArrow") -or ($playerInput.key -eq "Escape")) {
+        if(($playerInput.key -eq "UpArrow") -or ($playerInput.key -eq "LeftArrow") -or ($playerInput.key -eq "RightArrow") -or ($playerInput.key -eq "DownArrow") -or ($playerInput.key -eq "Escape") -or ($playerInput.key -eq "Spacebar")) {
             $validInput = $true
         }
     } until ($validInput)
@@ -485,6 +518,9 @@ while (1 -eq 1) {
         }
         DownArrow {
             shiftDown
+        }
+        Spacebar {
+            $breakHere = 1
         }
         Escape {
             restoreConsole
